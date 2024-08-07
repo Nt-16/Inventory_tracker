@@ -1,15 +1,16 @@
 'use client'
+// require('dotenv').config();
 import Image from "next/image";
 import {useState, useEffect} from 'react'
 import {firestore} from '@/firebase'
 import { Box, Typography, Modal, Stack, TextField, Button } from "@mui/material";
-import { query, collection, getDocs, deleteDoc } from "firebase/firestore";
-
+import { query, collection, getDocs, deleteDoc, getDoc, setDoc, doc } from "firebase/firestore";
+import DeleteRoundedIcon from '@mui/icons-material/DeleteRounded';
 
 export default function Home() {
 
   const [inventory, setInventory] = useState([])
-  const [open, setOpen] = useState([false])
+  const [open, setOpen] = useState(false)
   const[itemName, setItemName] = useState('')
 
   const updateInventory = async () => {
@@ -25,6 +26,15 @@ export default function Home() {
     setInventory(inventoryList)
     
   }
+  const removeForever = async(item) => {
+    const docRef = doc(collection(firestore, 'inventory'), item)
+    const docSnap = await getDoc(docRef)
+    if (docSnap.exists()){
+      await deleteDoc(docRef)
+    }
+    await updateInventory()
+
+  }
 
   const removeItem = async(item) => {
     const docRef = doc(collection(firestore, 'inventory'), item)
@@ -38,6 +48,7 @@ export default function Home() {
         await setDoc(docRef, {quantity: quantity - 1})
       }
     }
+    await updateInventory()
   }
 
   const addItem = async(item) => {
@@ -50,6 +61,7 @@ export default function Home() {
     }else {
       await setDoc(docRef, {quantity: 1})
     }
+    await updateInventory()
   }
   //for modal 
   const handleOpen = () => setOpen(true)
@@ -68,9 +80,9 @@ export default function Home() {
       alignItems="center" 
       gap={2} 
       flexDirection="column"
-    >
+      >
       <Modal open={open} onClose={handleClose}>
-        <Box 
+      <Box 
         position="absolute" 
         top="50%" 
         left="50%"
@@ -94,7 +106,7 @@ export default function Home() {
         <Stack width="100%" direction ="row" spacing={2}>
           <TextField
           variant="outlined"
-          fulllWidth
+          fullWidth
           value={itemName}
           onChange={(e) =>{
             setItemName(e.target.value)
@@ -105,57 +117,91 @@ export default function Home() {
           <Button 
             variant="outlined" 
             onClick={() => {
-              addItem(itemName)
-              setItemName('')
-              handleClose()
+              addItem(itemName) // adding the item name to the database
+              setItemName('') // emplty the text field
+              handleClose() // close the modal
             }}
           >Add</Button>
+        </Stack>
+      </Box>
 
-          
+      </Modal>
+      <Stack width="90vw" direction="row" marginBottom={10} display="flex" justifyContent="center">
+        <Typography variant="h1">INVENTORY</Typography>
+        
+      </Stack>
+
+      <Box border="1px solid #333">
+        <Box
+          width="800px"
+          height="100px"
+          bgcolor="#ADD8F6"
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          gap={10}
+          >
+          <Typography variant="h2" color="#333"  > Inventory Items</Typography>
+          <Button variant="contained" 
+         onClick={() => {
+          handleOpen()
+        }}> Add New Item
+        </Button>
+        </Box>
+      
+
+        <Stack width="800px" height="500px" spacing={2} overflow="auto">
+          {
+            inventory.map(({name, quantity}) =>(
+              <Box key={name} width="100%" minHight="150px" display="flex"
+              alignItems="center" justifyContent="space-between" bgcolor="#f0f0f0" padding={5}
+              >
+                <Typography
+                variant="h3"
+                color="#333"
+                textAlign="center"
+                >
+                  {name.charAt(0).toUpperCase() + name.slice(1)}
+                </Typography>
+                
+                <Typography
+                  variant="h3"
+                  color="#333"
+                  textAlign="center"
+
+                  >
+                  {quantity}
+                </Typography>
+                <Stack direction="row" spacing={2}>
+                  <Button variant="contained" onClick={() =>{
+                    addItem(name)
+                    }}
+                    >
+                    Add
+                  </Button>
+                  <Button variant="contained" onClick={() =>{
+                    removeItem(name)
+                    }}
+                    >
+                    Remove
+                  </Button>
+                  <DeleteRoundedIcon onClick={() =>{
+                    removeForever(name)
+                    }}/>
+                </Stack>
+
+
+              </Box>
+            ))
+          }
+        
+        
+
 
 
         </Stack>
 
-        </Box>
-
-      </Modal>
-      <Button variant="contained" onClick={() => {
-        handleOpen()
-      }}> Add New Item
-
-      </Button>
-
-      <Box border="1px solid #333">
-        <Box
-        width="800px"
-        height="100px"
-        bgcolor="#ADD8F6"
-        display="flex"
-        alignItems="center"
-        justifyContent="center"
-        >
-          <Typography variant="h2" color="#333"  > Inventory Items</Typography>
-
-
-        </Box>
       </Box>
-
-      <Stack width="800px" height="300px" spacing={2} overflow="auto">
-        {
-          inventory.map(({name, quantity}) =>{
-            <Box key={name} width="100%" minHight="150px" display="flex"
-            alignItems="center" justifyContent="center" bgcolor="#f0f0f0" padding={5}
-            >
-              <Typography>{name}</Typography>
-            </Box>
-          })
-        }
-      
-      
-
-
-
-      </Stack>
      
 
 
